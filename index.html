@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Prompt Studio — Venice.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🎬</div>
+      <div>
+        <h1>Video Prompt Studio</h1>
+        <p>Venice.ai · Prompt Compiler</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-ghost btn-sm" id="debug-btn">🔎 Debug clauses</button>
+    </div>
+  </header>
+
+  <!-- ── Config row ─────────────────────────────────────────── -->
+  <div id="config-row">
+
+    <div class="field">
+      <label for="model-select">Model</label>
+      <select id="model-select"></select>
+    </div>
+
+    <div class="field">
+      <label for="mode-select">Mode</label>
+      <select id="mode-select">
+        <option value="t2v">Text-to-Video</option>
+        <option value="i2v">Image-to-Video</option>
+      </select>
+    </div>
+
+    <div class="field" style="max-width:110px">
+      <label for="duration-select">Duration</label>
+      <select id="duration-select">
+        <option value="5s">5 seconds</option>
+        <option value="10s" selected>10 seconds</option>
+        <option value="15s">15 seconds</option>
+      </select>
+    </div>
+
+    <div class="field" style="flex:2">
+      <label style="color:transparent;user-select:none">·</label>
+      <label class="toggle-row">
+        <span class="toggle">
+          <input type="checkbox" id="no-cuts-toggle">
+          <span class="toggle-track"></span>
+          <span class="toggle-thumb"></span>
+        </span>
+        <span class="toggle-label">Single continuous shot &mdash; No cuts</span>
+      </label>
+    </div>
+
+  </div>
+
+  <!-- ── Left panel ─────────────────────────────────────────── -->
+  <div id="left-panel">
+
+    <!-- Shot setup -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Shot Setup</span>
+      </div>
+      <div class="section-body">
+        <textarea id="shot-textarea" placeholder="Describe the opening composition, scene environment, and spatial context. E.g. Wide establishing shot of a rain-soaked Tokyo alley at midnight, neon reflections pooling on the cobblestones."></textarea>
+      </div>
+    </div>
+
+    <!-- Character / context -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Character / Context</span>
+      </div>
+      <div class="section-body">
+        <textarea id="context-textarea" placeholder="Describe the subject(s), their appearance, emotion, and role in the scene. For Image-to-Video, focus on motion and transformation from the reference image."></textarea>
+      </div>
+    </div>
+
+    <!-- Timeline events -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Timeline Events</span>
+        <button class="btn-ghost btn-sm" id="add-event-btn">+ Add event</button>
+      </div>
+      <div class="section-body">
+        <div style="display:grid;grid-template-columns:70px 1fr 1fr 28px;gap:6px;padding:0 0 6px;font-size:10px;color:var(--text-faint);letter-spacing:0.5px;text-transform:uppercase;">
+          <span>Time</span>
+          <span>Event</span>
+          <span>Dialogue</span>
+          <span></span>
+        </div>
+        <div id="timeline-list"></div>
+        <p style="font-size:11px;color:var(--text-faint);margin-top:6px">
+          Timestamps like <code style="font-family:var(--mono)">00:03</code>. Dialogue is formatted as screenplay speech.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right panel ────────────────────────────────────────── -->
+  <div id="right-panel">
+
+    <!-- Camera -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Camera Movement</span>
+      </div>
+      <div class="section-body">
+        <select id="camera-select"><option value="">— none specified —</option></select>
+      </div>
+    </div>
+
+    <!-- Lighting (T2V only) -->
+    <div class="section t2v-only">
+      <div class="section-header">
+        <span class="section-title">Lighting</span>
+      </div>
+      <div class="section-body">
+        <select id="lighting-select"><option value="">— none specified —</option></select>
+      </div>
+    </div>
+
+    <!-- Style (T2V only) -->
+    <div class="section t2v-only">
+      <div class="section-header">
+        <span class="section-title">Visual Style</span>
+      </div>
+      <div class="section-body">
+        <select id="style-select"><option value="">— none specified —</option></select>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Presets</span>
+      </div>
+      <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="preset-row">
+          <select id="preset-select"></select>
+          <button class="btn-gold btn-sm" id="load-preset-btn">Load</button>
+          <button class="btn-danger btn-sm" id="delete-preset-btn">Delete</button>
+        </div>
+        <div class="preset-row">
+          <input type="text" id="preset-name" placeholder="New preset name…" style="flex:1">
+          <button class="btn-primary btn-sm" id="save-preset-btn">Save</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-faint)">Presets are stored in your browser's localStorage.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Output panel ───────────────────────────────────────── -->
+  <div id="output-panel">
+
+    <!-- Compiled prompt -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Compiled Prompt</span>
+      </div>
+      <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
+        <textarea id="output-prompt" readonly placeholder="Your assembled prompt will appear here…"></textarea>
+        <div class="output-toolbar">
+          <span class="prompt-stats">
+            <span id="char-count">0 chars</span>
+            &nbsp;·&nbsp;
+            <span id="word-count">0 words</span>
+          </span>
+          <button class="btn-success" id="copy-btn">
+            📋 Copy prompt
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug panel -->
+    <div class="section" id="debug-panel">
+      <div class="section-header">
+        <span class="section-title">Debug — Clause Breakdown</span>
+      </div>
+      <div class="section-body">
+        <div id="debug-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Copy flash notification -->
+<div id="copy-flash" class="copy-flash">Copied!</div>
+
+<script src="app.js"></script>
+</body>
+</html>
