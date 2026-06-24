@@ -1,11 +1,16 @@
 'use strict';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
+//
+// All option lists live here. To add entries to any selector, append strings
+// to the relevant array. New selectors: copy the pattern below and add a
+// matching <select> in index.html + a clause in compilePrompt().
 
 const MODELS = [
   { id: 'seedance-2-enhanced',     label: 'Seedance 2.0 Enhanced',     modes: ['t2v'] },
   { id: 'seedance-2-enhanced-r2v', label: 'Seedance 2.0 Enhanced R2V', modes: ['i2v'] },
   { id: 'wan-2.7',                 label: 'WAN 2.7',                   modes: ['t2v', 'i2v'] },
+  // extend here — { id: 'model-id', label: 'Display name', modes: ['t2v'] }
 ];
 
 const DURATIONS = ['5s', '10s', '15s'];
@@ -27,6 +32,7 @@ const CAMERA_MOVES = [
   'Dolly zoom (Vertigo)',
   'Tracking shot',
   'Overhead drone descent',
+  // extend here
 ];
 
 const LIGHTING = [
@@ -42,6 +48,7 @@ const LIGHTING = [
   'Backlit silhouette',
   'Moonlight',
   'Practical lamps only',
+  // extend here
 ];
 
 const STYLES = [
@@ -57,7 +64,18 @@ const STYLES = [
   'Hyperrealistic CGI',
   'Impressionist brushwork',
   'Gritty neo-noir',
+  // extend here
 ];
+
+// User-defined selector lists. Each entry becomes an option in the
+// corresponding <select> in index.html. Add a matching clause in
+// compilePrompt() if you add a new list here.
+//
+// Example for a new "Wardrobe" selector:
+//   const WARDROBE = ['Formal suit', 'Casual', /* extend here */];
+//   Then in index.html add a <select id="wardrobe-select"> section,
+//   and in compilePrompt() add:
+//     clauses.push({ key: 'Wardrobe', value: elWardrobe.value ? `Wardrobe: ${elWardrobe.value}.` : '' });
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -92,6 +110,7 @@ const elPresetName    = $('preset-name');
 const elSavePreset    = $('save-preset-btn');
 const elLoadPreset    = $('load-preset-btn');
 const elDeletePreset  = $('delete-preset-btn');
+const elDirectives    = $('directives-textarea');
 const elCopyFlash     = $('copy-flash');
 
 // ── Pure text helpers ─────────────────────────────────────────────────────────
@@ -172,6 +191,10 @@ function compilePrompt() {
   if (noCuts) {
     clauses.push({ key: 'Continuity', value: 'Single continuous shot. No cuts.' });
   }
+
+  // Additional directives — emitted verbatim, no transformation applied
+  const directives = elDirectives.value.trim();
+  clauses.push({ key: 'Additional directives', value: directives });
 
   // Assemble
   const prompt = clauses
@@ -376,7 +399,8 @@ function getFormState() {
     camera:   elCamera.value,
     lighting: elLighting.value,
     style:    elStyle.value,
-    noCuts:   elNoCuts.checked,
+    noCuts:      elNoCuts.checked,
+    directives:  elDirectives.value,
     timeline: JSON.parse(JSON.stringify(timelineEvents)),
     nextId:   nextEventId,
   };
@@ -391,7 +415,8 @@ function applyFormState(state) {
   if (state.camera)   elCamera.value   = state.camera;
   if (state.lighting) elLighting.value = state.lighting;
   if (state.style)    elStyle.value    = state.style;
-  elNoCuts.checked = state.noCuts ?? false;
+  elNoCuts.checked      = state.noCuts ?? false;
+  elDirectives.value    = state.directives ?? '';
 
   timelineEvents = state.timeline ?? [];
   nextEventId    = state.nextId   ?? (timelineEvents.length + 1);
@@ -448,6 +473,7 @@ function init() {
   elLighting.addEventListener('change', update);
   elStyle.addEventListener('change', update);
   elNoCuts.addEventListener('change', update);
+  elDirectives.addEventListener('input', update);
 
   elAddEvent.addEventListener('click', addTimelineEvent);
   elCopyBtn.addEventListener('click', copyPrompt);
