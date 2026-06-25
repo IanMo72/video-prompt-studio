@@ -80,8 +80,9 @@ const STYLES = [
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let timelineEvents = [];   // { id, ts, event, dialogue }
-let nextEventId = 1;
-let debugVisible = false;
+let nextEventId    = 1;
+let debugVisible   = false;
+let liveApiModels  = null; // set after key validation
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -242,28 +243,62 @@ function escapeHtml(str) {
 // ── Model / mode sync ─────────────────────────────────────────────────────────
 
 function syncModelMode() {
-  const modelDef = MODELS.find(m => m.id === elModel.value);
-  if (!modelDef) return;
+  const modelId  = elModel.value;
+  const modelDef = MODELS.find(m => m.id === modelId);
 
-  const modeOpts = elMode.querySelectorAll('option');
-  let modeChanged = false;
-  modeOpts.forEach(opt => {
-    const allowed = modelDef.modes.includes(opt.value);
-    opt.disabled = !allowed;
-    if (!allowed && opt.selected) modeChanged = true;
-  });
-
-  // If current mode is now invalid, pick first valid one
-  if (modeChanged || !modelDef.modes.includes(elMode.value)) {
-    elMode.value = modelDef.modes[0];
+  if (modelDef) {
+    // Static MODELS definition — authoritative mode list
+    const modeOpts = elMode.querySelectorAll('option');
+    let modeChanged = false;
+    modeOpts.forEach(opt => {
+      const allowed = modelDef.modes.includes(opt.value);
+      opt.disabled = !allowed;
+      if (!allowed && opt.selected) modeChanged = true;
+    });
+    if (modeChanged || !modelDef.modes.includes(elMode.value)) {
+      elMode.value = modelDef.modes[0];
+    }
+  } else if (liveApiModels) {
+    // Live API model — infer mode from ID heuristic
+    const isI2VOnly = /r2v|i2v|image.to.video/i.test(modelId);
+    elMode.querySelectorAll('option').forEach(opt => {
+      opt.disabled = isI2VOnly && opt.value !== 'i2v';
+    });
+    if (isI2VOnly && elMode.value !== 'i2v') elMode.value = 'i2v';
   }
 
   applyModeClass();
+  updateSegControl();
   update();
 }
 
 function applyModeClass() {
   document.body.classList.toggle('mode-i2v', elMode.value === 'i2v');
+}
+
+// ── Test / Final toggle ───────────────────────────────────────────────────────
+
+function setModelByRole(role) {
+  const options = Array.from(elModel.options);
+  let target;
+  if (role === 'test') {
+    // Prefer WAN uncensored, fall back to any WAN
+    target = options.find(o => /wan/i.test(o.value) && /uncensored/i.test(o.value))
+          ?? options.find(o => /wan/i.test(o.value));
+  } else {
+    // Prefer Seedance R2V, fall back to any Seedance
+    target = options.find(o => /seedance/i.test(o.value) && /r2v/i.test(o.value))
+          ?? options.find(o => /seedance/i.test(o.value));
+  }
+  if (target) { elModel.value = target.value; syncModelMode(); }
+}
+
+function updateSegControl() {
+  const val     = elModel.value.toLowerCase();
+  const isTest  = /wan/.test(val);
+  const isFinal = /seedance/.test(val);
+  elTestModeBtn.classList.toggle('active', isTest);
+  elFinalModeBtn.classList.toggle('active', isFinal);
 }
 
 // ── Timeline editor ───────────────────────────────────────────────────────────
@@ -457,6 +492,8 @@ function populateSelect(el, items) {
 
 // ── API — refs ────────────────────────────────────────────────────────────────
 
+const elTestModeBtn    = $('test-mode-btn');
+const elFinalModeBtn   = $('final-mode-btn');
 const elSettingsBtn    = $('settings-btn');
 const elSettingsModal  = $('settings-modal');
 const elCloseSettings  = $('close-settings-btn');
@@ -583,6 +620,7 @@ async function validateKey() {
 }
 
 function injectLiveModels(apiModels) {
+  liveApiModels = apiModels;
   elModel.innerHTML = '';
   apiModels.forEach(m => {
     const opt = document.createElement('option');
@@ -590,26 +628,7 @@ function injectLiveModels(apiModels) {
     opt.textContent = m.name ?? m.id;
     elModel.appendChild(opt);
   });
-  // Rebuild mode constraints from live data — infer i2v from model id heuristic
-  // syncModelMode will fall back gracefully if model not in MODELS array
-  syncModelModeLive(apiModels);
-}
-
-function syncModelModeLive(apiModels) {
-  const modelId  = elModel.value;
-  const modelDef = apiModels.find(m => m.id === modelId);
-  if (!modelDef) return;
-  // Heuristic: if model id contains r2v/i2v/image-to-video → i2v only
-  const isI2VOnly = /r2v|i2v|image.to.video/i.test(modelId);
-  const isT2VOnly = !isI2VOnly && !/r2v|i2v/i.test(modelId);
-  const modeOpts  = elMode.querySelectorAll('option');
-  modeOpts.forEach(opt => {
-    if (isI2VOnly) opt.disabled = opt.value !== 'i2v';
-    else           opt.disabled = false;
-  });
-  if (isI2VOnly && elMode.value !== 'i2v') elMode.value = 'i2v';
-  applyModeClass();
-  update();
+  syncModelMode();
 }
 
 // ── API — image preview ───────────────────────────────────────────────────────
@@ -873,6 +892,10 @@ function init() {
   elLoadPreset.addEventListener('click', loadPreset);
   elDeletePreset.addEventListener('click', deletePreset);
   elPresetName.addEventListener('keydown', e => { if (e.key === 'Enter') savePreset(); });
+
+  // Test / Final toggle
+  elTestModeBtn.addEventListener('click',  () => setModelByRole('test'));
+  elFinalModeBtn.addEventListener('click', () => setModelByRole('final'));
 
   // Settings modal
   elSettingsBtn.addEventListener('click', openSettings);

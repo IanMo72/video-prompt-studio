@@ -681,6 +681,33 @@ body.mode-i2v .t2v-only  { display: none; }
   max-height: 480px;
 }
 
+/* ── Test / Final segmented control ─────── */
+.seg-control {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.seg-btn {
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  border: none;
+  border-radius: 0;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+
+.seg-btn:active { transform: none; }
+.seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+
+.seg-btn.active         { background: var(--accent); color: #fff; }
+.seg-btn.active.is-final { background: var(--gold);   color: #0a0a12; }
+
 /* ── Spinner ─────────────────────────────── */
 .spinner {
   display: inline-block;
