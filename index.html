@@ -22,6 +22,8 @@
       </div>
     </div>
     <div class="header-right">
+      <span class="key-indicator" id="key-indicator">No API key</span>
+      <button class="btn-ghost btn-sm" id="settings-btn">⚙ API settings</button>
       <button class="btn-ghost btn-sm" id="debug-btn">🔎 Debug clauses</button>
     </div>
   </header>
@@ -67,6 +69,28 @@
 
   <!-- ── Left panel ─────────────────────────────────────────── -->
   <div id="left-panel">
+
+    <!-- I2V source image (I2V mode only) -->
+    <div class="section i2v-only" id="image-section">
+      <div class="section-header">
+        <span class="section-title">Source Image</span>
+      </div>
+      <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="image-url-wrap">
+          <label for="image-url-input">Image URL or data URL</label>
+          <input type="url" id="image-url-input" placeholder="https://… or paste a base64 data:image/… URL" style="margin-top:6px">
+          <div class="image-preview-container" id="image-preview-container">
+            <img id="image-preview" class="image-preview" alt="Source image preview">
+          </div>
+        </div>
+        <div>
+          <label for="image-desc-textarea">Describe this image</label>
+          <textarea id="image-desc-textarea" style="margin-top:6px" placeholder="Describe the subjects, environment, mood, and colours. The script assistant uses this to suggest motion and action for the video."></textarea>
+        </div>
+        <button class="btn-gold" id="suggest-btn">✨ Suggest script from image</button>
+        <div class="suggest-status hidden" id="suggest-status"></div>
+      </div>
+    </div>
 
     <!-- Shot setup -->
     <div class="section">
@@ -197,6 +221,56 @@
       </div>
     </div>
 
+    <!-- Generation panel -->
+    <div class="section" id="generation-panel">
+      <div class="section-header">
+        <span class="section-title">Generate Video</span>
+      </div>
+      <div class="section-body" style="display:flex;flex-direction:column;gap:12px">
+
+        <div class="gen-row">
+          <div class="field">
+            <label for="negative-prompt">Negative Prompt</label>
+            <textarea id="negative-prompt" style="min-height:54px;margin-top:6px" placeholder="What to avoid…"></textarea>
+          </div>
+        </div>
+
+        <div class="gen-row">
+          <div class="field">
+            <label for="aspect-ratio-select">Aspect Ratio</label>
+            <select id="aspect-ratio-select" style="margin-top:6px">
+              <option value="">Auto</option>
+              <option value="16:9">16:9 Landscape</option>
+              <option value="9:16">9:16 Portrait</option>
+              <option value="1:1">1:1 Square</option>
+              <option value="4:3">4:3</option>
+              <option value="3:4">3:4</option>
+              <option value="21:9">21:9 Cinematic</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="resolution-select">Resolution</label>
+            <select id="resolution-select" style="margin-top:6px">
+              <option value="">Auto</option>
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+              <option value="1080p">1080p</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="gen-toolbar">
+          <button class="btn-ghost" id="quote-btn">Get quote</button>
+          <span class="quote-display hidden" id="quote-display"></span>
+          <button class="btn-primary" id="generate-btn">Generate video</button>
+        </div>
+
+        <div class="gen-status hidden" id="gen-status"></div>
+        <video class="gen-video hidden" id="gen-video" controls playsinline></video>
+
+      </div>
+    </div>
+
     <!-- Debug panel -->
     <div class="section" id="debug-panel">
       <div class="section-header">
@@ -209,6 +283,33 @@
 
   </div>
 
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">⚙ API Settings</span>
+      <button class="btn-close" id="close-settings-btn" title="Close">×</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="api-key-input">Venice API Key</label>
+      <div class="key-input-row">
+        <input type="password" id="api-key-input" placeholder="VENICE_INFERENCE_KEY_…" autocomplete="off" spellcheck="false">
+        <button class="btn-primary btn-sm" id="save-key-btn">Save</button>
+        <button class="btn-ghost btn-sm" id="clear-key-btn">Clear</button>
+      </div>
+      <div class="key-status" id="key-status">
+        <span class="key-dot" id="key-dot"></span>
+        <span id="key-status-text">No key stored</span>
+      </div>
+    </div>
+
+    <p class="modal-note">
+      Use an <strong>Inference</strong> key from <em>venice.ai/settings/api</em>. The key is stored only in your browser's localStorage — it never leaves your device except in API requests to Venice.ai. Set a monthly spend limit on Venice when generating the key.
+    </p>
+  </div>
 </div>
 
 <!-- Copy flash notification -->
