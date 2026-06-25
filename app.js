@@ -747,7 +747,12 @@ async function getQuote() {
     };
     const res  = await venicePost('/video/quote', body);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message ?? `HTTP ${res.status}`);
+    if (!res.ok) {
+      const hint = res.status === 404
+        ? ` — model "${body.model}" not found. Save your API key (⚙) to load live model IDs.`
+        : '';
+      throw new Error((data.error?.message ?? `HTTP ${res.status}`) + hint);
+    }
 
     currentQuoteUsd = data.quote;
     elQuoteDisplay.textContent = `Estimated: $${Number(currentQuoteUsd).toFixed(4)}`;
