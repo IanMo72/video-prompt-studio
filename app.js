@@ -596,43 +596,23 @@ async function validateKey() {
   const key = getApiKey();
   if (!key) { setKeyStatus('none', 'No key stored'); updateKeyIndicator(false); return; }
   try {
-    const res = await veniceGet('/models');
-    if (!res.ok) {
-      setKeyStatus('error', `Invalid key (${res.status})`);
+    // Validate key with a cheap text models fetch first
+    const checkRes = await veniceGet('/models?type=text&limit=1');
+    if (!checkRes.ok) {
+      setKeyStatus('error', `Invalid key (${checkRes.status})`);
       updateKeyIndicator(false);
       return;
     }
+
+    // Fetch video models specifically
+    const res  = await veniceGet('/models?type=video');
     const data = await res.json();
-    const all  = data.data ?? data.models ?? [];
-
-    // Log raw model list so we can inspect Venice's actual field names
-    console.log('[VPS] Raw models from Venice API:', JSON.stringify(all.slice(0, 5), null, 2));
-    console.log('[VPS] All model IDs:', all.map(m => `${m.id} (type=${m.type ?? m.model_type ?? '?'})`));
-
-    const videoModels = all.filter(m => {
-      const id   = (m.id          ?? '').toLowerCase();
-      const type = (m.type        ?? m.model_type ?? m.object ?? '').toLowerCase();
-      const name = (m.name        ?? m.display_name ?? '').toLowerCase();
-      // Match on explicit type field
-      if (type.includes('video')) return true;
-      // Match on model spec traits array if present
-      if (Array.isArray(m.model_spec?.traits) && m.model_spec.traits.some(t => /video/i.test(t))) return true;
-      // Match on ID or name containing known video model names
-      if (/seedance|wan[_\-\s]|kling|sora|runway|pika|mochi|ltx|cogvideo|r2v|image.to.video|text.to.video/i.test(id + ' ' + name)) return true;
-      return false;
-    });
+    const videoModels = data.data ?? data.models ?? [];
 
     const count = videoModels.length;
-    setKeyStatus('ok', `Key valid — ${count} video model${count !== 1 ? 's' : ''} found (${all.length} total)`);
+    setKeyStatus('ok', `Key valid — ${count} video model${count !== 1 ? 's' : ''} available`);
     updateKeyIndicator(true);
-    if (count) {
-      injectLiveModels(videoModels);
-    } else {
-      // Nothing matched — show everything so the user can at least select manually
-      console.warn('[VPS] No video models matched filter. Showing all models as fallback.');
-      setKeyStatus('ok', `Key valid — showing all ${all.length} models (check console for types)`);
-      injectLiveModels(all);
-    }
+    if (count) injectLiveModels(videoModels);
   } catch (err) {
     setKeyStatus('error', `Network error: ${err.message}`);
     updateKeyIndicator(false);
@@ -641,11 +621,12 @@ async function validateKey() {
 
 function injectLiveModels(apiModels) {
   liveApiModels = apiModels;
+  console.log('[VPS] Video models loaded:', apiModels.map(m => `${m.id} — ${m.model_spec?.name ?? m.name ?? '?'}`));
   elModel.innerHTML = '';
   apiModels.forEach(m => {
     const opt = document.createElement('option');
     opt.value = m.id;
-    opt.textContent = m.name ?? m.id;
+    opt.textContent = m.model_spec?.name ?? m.name ?? m.id;
     elModel.appendChild(opt);
   });
   syncModelMode();
