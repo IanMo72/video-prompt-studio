@@ -681,7 +681,7 @@ async function suggestScript() {
 
   try {
     const res = await venicePost('/chat/completions', {
-      model: 'venice-uncensored',
+      model: 'venice-uncensored-1-2',
       messages: [
         { role: 'system', content: SUGGEST_SYSTEM },
         { role: 'user',   content: `Image description: ${desc}` },
