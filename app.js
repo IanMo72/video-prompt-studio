@@ -94,10 +94,14 @@ const ASSIST_MODEL = 'venice-uncensored-1-2';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let timelineEvents = [];   // { id, ts, event, dialogue }
-let nextEventId    = 1;
-let debugVisible   = false;
-let liveApiModels  = null; // set after key validation
+let timelineEvents  = [];  // { id, ts, event, dialogue }
+let nextEventId     = 1;
+let debugVisible    = false;
+let liveApiModels   = null; // set after key validation
+
+let characters      = [];  // { id, name, desc, prompt, tags[] }
+let selectedCharIds = new Set();
+let editingCharId   = null;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -128,6 +132,178 @@ const elLoadPreset    = $('load-preset-btn');
 const elDeletePreset  = $('delete-preset-btn');
 const elDirectives    = $('directives-textarea');
 const elCopyFlash     = $('copy-flash');
+
+// ── Character library ─────────────────────────────────────────────────────────
+
+const CHAR_STORE = 'vps_characters_v1';
+
+function loadCharacters() {
+  try { return JSON.parse(localStorage.getItem(CHAR_STORE)) || []; }
+  catch { return []; }
+}
+
+function saveCharacters() {
+  localStorage.setItem(CHAR_STORE, JSON.stringify(characters));
+}
+
+function renderCharacterList() {
+  const grid = $('char-grid');
+  const info = $('char-selection-info');
+  grid.innerHTML = '';
+
+  if (!characters.length) {
+    grid.innerHTML = '<div class="char-empty">No characters yet — click + New to add one.</div>';
+    info.textContent = '';
+    return;
+  }
+
+  characters.forEach(ch => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (selectedCharIds.has(ch.id) ? ' selected' : '');
+    card.dataset.id = ch.id;
+
+    const tagsHtml = ch.tags.length
+      ? ch.tags.map(t => `<span class="char-tag">${escapeHtml(t)}</span>`).join('')
+      : '';
+
+    card.innerHTML = `
+      <div class="char-name">${escapeHtml(ch.name)}</div>
+      ${ch.desc ? `<div class="char-desc">${escapeHtml(ch.desc)}</div>` : ''}
+      ${tagsHtml ? `<div class="char-tags">${tagsHtml}</div>` : ''}
+      <button class="char-edit-btn" title="Edit character">✎</button>
+    `;
+
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('char-edit-btn')) return;
+      toggleCharacter(ch.id);
+    });
+    card.querySelector('.char-edit-btn').addEventListener('click', () => openCharEditor(ch.id));
+
+    grid.appendChild(card);
+  });
+
+  const n = selectedCharIds.size;
+  info.textContent = n ? `${n} character${n > 1 ? 's' : ''} selected` : '';
+}
+
+function toggleCharacter(id) {
+  if (selectedCharIds.has(id)) selectedCharIds.delete(id);
+  else selectedCharIds.add(id);
+  renderCharacterList();
+  update();
+}
+
+function openCharEditor(id) {
+  const modal     = $('char-modal');
+  const titleEl   = $('char-modal-title');
+  const nameIn    = $('char-name-input');
+  const descIn    = $('char-desc-input');
+  const promptIn  = $('char-prompt-input');
+  const tagsIn    = $('char-tags-input');
+  const deleteBtn = $('char-delete-btn');
+
+  if (id) {
+    const ch = characters.find(c => c.id === id);
+    if (!ch) return;
+    editingCharId = id;
+    titleEl.textContent = 'Edit Character';
+    nameIn.value   = ch.name;
+    descIn.value   = ch.desc;
+    promptIn.value = ch.prompt;
+    tagsIn.value   = ch.tags.join(', ');
+    deleteBtn.classList.remove('hidden');
+  } else {
+    editingCharId = null;
+    titleEl.textContent = 'Add Character';
+    nameIn.value   = '';
+    descIn.value   = '';
+    promptIn.value = '';
+    tagsIn.value   = '';
+    deleteBtn.classList.add('hidden');
+  }
+
+  modal.classList.add('open');
+  nameIn.focus();
+}
+
+function closeCharModal() {
+  $('char-modal').classList.remove('open');
+  editingCharId = null;
+}
+
+function saveCharEditor() {
+  const name = $('char-name-input').value.trim();
+  if (!name) { $('char-name-input').focus(); return; }
+
+  const entry = {
+    id:     editingCharId ?? `ch_${Date.now()}`,
+    name,
+    desc:   $('char-desc-input').value.trim(),
+    prompt: $('char-prompt-input').value.trim(),
+    tags:   $('char-tags-input').value.split(',').map(t => t.trim()).filter(Boolean),
+  };
+
+  if (editingCharId) {
+    const idx = characters.findIndex(c => c.id === editingCharId);
+    if (idx !== -1) characters[idx] = entry;
+  } else {
+    characters.push(entry);
+  }
+
+  saveCharacters();
+  closeCharModal();
+  renderCharacterList();
+  update();
+}
+
+function deleteCharacter() {
+  if (!editingCharId) return;
+  if (!confirm(`Delete character "${characters.find(c => c.id === editingCharId)?.name}"?`)) return;
+  characters = characters.filter(c => c.id !== editingCharId);
+  selectedCharIds.delete(editingCharId);
+  saveCharacters();
+  closeCharModal();
+  renderCharacterList();
+  update();
+}
+
+function exportCharacters() {
+  if (!characters.length) { showFlash('No characters to export.'); return; }
+  const blob = new Blob([JSON.stringify(characters, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'vps-characters.json' });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCharacters() {
+  const input = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json' });
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(reader.result);
+        if (!Array.isArray(imported)) throw new Error('Expected a JSON array');
+        const merged = [...characters];
+        let added = 0;
+        imported.forEach(ch => {
+          if (!ch.id || !ch.name) return;
+          if (!merged.find(c => c.id === ch.id)) { merged.push(ch); added++; }
+        });
+        characters = merged;
+        saveCharacters();
+        renderCharacterList();
+        showFlash(`Imported ${added} character${added !== 1 ? 's' : ''}.`);
+      } catch (err) {
+        showFlash(`Import error: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  });
+  input.click();
+}
 
 // ── Pure text helpers ─────────────────────────────────────────────────────────
 
@@ -166,7 +342,11 @@ function compilePrompt() {
   const mode     = elMode.value;
   const duration = elDuration.value;
   const shot     = cleanPart(elShot.value);
-  const context  = cleanPart(elContext.value);
+  const charPrompts = characters
+    .filter(c => selectedCharIds.has(c.id) && c.prompt)
+    .map(c => cleanPart(c.prompt))
+    .join(' ');
+  const context  = [charPrompts, cleanPart(elContext.value)].filter(Boolean).join(' ');
   const camera   = elCamera.value;
   const lighting = elLighting.value;
   const style    = elStyle.value;
@@ -451,8 +631,9 @@ function getFormState() {
     style:    elStyle.value,
     noCuts:      elNoCuts.checked,
     directives:  elDirectives.value,
-    timeline: JSON.parse(JSON.stringify(timelineEvents)),
-    nextId:   nextEventId,
+    timeline:     JSON.parse(JSON.stringify(timelineEvents)),
+    nextId:       nextEventId,
+    selectedChars: [...selectedCharIds],
   };
 }
 
@@ -470,9 +651,11 @@ function applyFormState(state) {
 
   timelineEvents = state.timeline ?? [];
   nextEventId    = state.nextId   ?? (timelineEvents.length + 1);
+  selectedCharIds = new Set(state.selectedChars ?? []);
 
   syncModelMode();
   renderTimeline();
+  renderCharacterList();
   update();
 }
 
@@ -937,10 +1120,23 @@ function init() {
   elQuoteBtn.addEventListener('click', getQuote);
   elGenerateBtn.addEventListener('click', generateVideo);
 
+  // Character library
+  characters = loadCharacters();
+  $('char-new-btn').addEventListener('click', () => openCharEditor(null));
+  $('char-export-btn').addEventListener('click', exportCharacters);
+  $('char-import-btn').addEventListener('click', importCharacters);
+  $('char-modal-close').addEventListener('click', closeCharModal);
+  $('char-cancel-btn').addEventListener('click', closeCharModal);
+  $('char-save-btn').addEventListener('click', saveCharEditor);
+  $('char-delete-btn').addEventListener('click', deleteCharacter);
+  $('char-modal').addEventListener('click', e => { if (e.target === $('char-modal')) closeCharModal(); });
+  $('char-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveCharEditor(); });
+
   // Restore state
   refreshPresetList();
   syncModelMode();
   renderTimeline();
+  renderCharacterList();
   update();
 
   // Validate stored key on load

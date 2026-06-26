@@ -78,6 +78,24 @@
   <!-- ── Left panel ─────────────────────────────────────────── -->
   <div id="left-panel">
 
+    <!-- Character library -->
+    <div class="section" id="char-library-section">
+      <div class="section-header">
+        <span class="section-title">Characters</span>
+        <button class="btn-ghost btn-sm" id="char-new-btn">+ New</button>
+      </div>
+      <div class="section-body">
+        <div class="char-grid" id="char-grid"></div>
+        <div class="char-toolbar">
+          <span class="char-selection-info" id="char-selection-info"></span>
+          <div class="char-io-btns">
+            <button class="btn-ghost btn-sm" id="char-export-btn" title="Export characters to JSON">⬇ Export</button>
+            <button class="btn-ghost btn-sm" id="char-import-btn" title="Import characters from JSON">⬆ Import</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- I2V source image (I2V mode only) -->
     <div class="section i2v-only" id="image-section">
       <div class="section-header">
@@ -291,6 +309,41 @@
 
   </div>
 
+</div>
+
+<!-- Character editor modal -->
+<div class="modal-overlay" id="char-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="char-modal-title">Add Character</span>
+      <button class="btn-close" id="char-modal-close">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="field">
+        <label for="char-name-input">Name</label>
+        <input type="text" id="char-name-input" placeholder="e.g. Alex" style="margin-top:6px">
+      </div>
+      <div class="field">
+        <label for="char-desc-input">Short description</label>
+        <input type="text" id="char-desc-input" placeholder="One-line label shown on the card" style="margin-top:6px">
+      </div>
+      <div class="field">
+        <label for="char-prompt-input">Prompt text</label>
+        <textarea id="char-prompt-input" style="margin-top:6px;min-height:110px" placeholder="Full character description injected into the prompt. Write this yourself."></textarea>
+      </div>
+      <div class="field">
+        <label for="char-tags-input">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma-separated, optional)</span></label>
+        <input type="text" id="char-tags-input" placeholder="e.g. female, lead, recurring" style="margin-top:6px">
+      </div>
+    </div>
+    <div class="char-modal-footer">
+      <button class="btn-danger btn-sm hidden" id="char-delete-btn">Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-ghost btn-sm" id="char-cancel-btn">Cancel</button>
+        <button class="btn-primary btn-sm" id="char-save-btn">Save character</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Settings modal -->
