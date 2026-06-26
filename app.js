@@ -668,6 +668,58 @@ function showFlash(msg) {
   }, 2000);
 }
 
+// ── Shot setup presets ────────────────────────────────────────────────────────
+
+const SHOT_PRESET_KEY = 'vps_shot_presets_v1';
+
+function loadShotPresets() {
+  try { return JSON.parse(localStorage.getItem(SHOT_PRESET_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function saveShotPresets(presets) {
+  localStorage.setItem(SHOT_PRESET_KEY, JSON.stringify(presets));
+}
+
+function refreshShotPresetList() {
+  const sel   = $('shot-preset-select');
+  const names = Object.keys(loadShotPresets()).sort();
+  sel.innerHTML = '<option value="">— shot presets —</option>' +
+    names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+}
+
+function saveShotPreset() {
+  const name = $('shot-preset-name').value.trim();
+  if (!name) { $('shot-preset-name').focus(); return; }
+  const presets = loadShotPresets();
+  presets[name] = elShot.value;
+  saveShotPresets(presets);
+  refreshShotPresetList();
+  $('shot-preset-select').value = name;
+  $('shot-preset-name').value = '';
+  showFlash(`Shot preset "${name}" saved.`);
+}
+
+function loadShotPreset() {
+  const name = $('shot-preset-select').value;
+  if (!name) return;
+  const text = loadShotPresets()[name];
+  if (text === undefined) return;
+  elShot.value = text;
+  update();
+  showFlash(`Shot preset "${name}" loaded.`);
+}
+
+function deleteShotPreset() {
+  const name = $('shot-preset-select').value;
+  if (!name) return;
+  const presets = loadShotPresets();
+  delete presets[name];
+  saveShotPresets(presets);
+  refreshShotPresetList();
+  showFlash(`Shot preset "${name}" deleted.`);
+}
+
 // ── Populate selects ──────────────────────────────────────────────────────────
 
 function populateModels() {
@@ -1132,8 +1184,15 @@ function init() {
   $('char-modal').addEventListener('click', e => { if (e.target === $('char-modal')) closeCharModal(); });
   $('char-name-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveCharEditor(); });
 
+  // Shot setup presets
+  $('shot-preset-save-btn').addEventListener('click', saveShotPreset);
+  $('shot-preset-load-btn').addEventListener('click', loadShotPreset);
+  $('shot-preset-delete-btn').addEventListener('click', deleteShotPreset);
+  $('shot-preset-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveShotPreset(); });
+
   // Restore state
   refreshPresetList();
+  refreshShotPresetList();
   syncModelMode();
   renderTimeline();
   renderCharacterList();
