@@ -6,10 +6,22 @@
 // to the relevant array. New selectors: copy the pattern below and add a
 // matching <select> in index.html + a clause in compilePrompt().
 
+// Fallback model list — used when no API key is set.
+// IDs here are best-guess; the live list from /models?type=video overrides these.
+// Modes: 't2v' = Text to Video, 'i2v' = Image to Video, 'v2v' = Video to Video
 const MODELS = [
-  { id: 'seedance-2-enhanced',     label: 'Seedance 2.0 Enhanced',     modes: ['t2v'] },
-  { id: 'seedance-2-enhanced-r2v', label: 'Seedance 2.0 Enhanced R2V', modes: ['i2v'] },
-  { id: 'wan-2.7',                 label: 'WAN 2.7',                   modes: ['t2v', 'i2v'] },
+  // ── Text to Video ─────────────────────────────────────────────
+  { id: 'seedance-2-0-enhanced',           label: 'Seedance 2.0 Enhanced (T2V)',    modes: ['t2v'] },
+  { id: 'wan-2-7-uncensored',              label: 'Wan 2.7 Uncensored (T2V)',       modes: ['t2v'] },
+  { id: 'seedance-2-0',                    label: 'Seedance 2.0',                   modes: ['t2v', 'i2v'] },
+  { id: 'wan-2-7',                         label: 'Wan 2.7',                        modes: ['t2v', 'i2v'] },
+  { id: 'kling-o3-pro',                    label: 'Kling O3 Pro',                   modes: ['t2v', 'i2v'] },
+  { id: 'seedance-2-0-mini',               label: 'Seedance 2.0 Mini',              modes: ['t2v', 'i2v'] },
+  // ── Image to Video ────────────────────────────────────────────
+  { id: 'seedance-2-0-enhanced-i2v',       label: 'Seedance 2.0 Enhanced (I2V)',    modes: ['i2v'] },
+  { id: 'wan-2-7-reference',               label: 'Wan 2.7 Reference',              modes: ['i2v'] },
+  { id: 'seedance-2-0-r2v',               label: 'Seedance 2.0 R2V',               modes: ['i2v'] },
+  { id: 'seedance-2-0-mini-r2v',          label: 'Seedance 2.0 Mini R2V',          modes: ['i2v'] },
   // extend here — { id: 'model-id', label: 'Display name', modes: ['t2v'] }
 ];
 
