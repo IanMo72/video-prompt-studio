@@ -79,6 +79,9 @@ const STYLES = [
   // extend here
 ];
 
+// Text model used for script assistance — update if Venice bumps the version
+const ASSIST_MODEL = 'venice-uncensored-1-2';
+
 // User-defined selector lists. Each entry becomes an option in the
 // corresponding <select> in index.html. Add a matching clause in
 // compilePrompt() if you add a new list here.
@@ -681,7 +684,7 @@ async function suggestScript() {
 
   try {
     const res = await venicePost('/chat/completions', {
-      model: 'venice-uncensored-1-2',
+      model: ASSIST_MODEL,
       messages: [
         { role: 'system', content: SUGGEST_SYSTEM },
         { role: 'user',   content: `Image description: ${desc}` },
