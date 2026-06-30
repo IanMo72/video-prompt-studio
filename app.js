@@ -44,6 +44,7 @@ const CAMERA_MOVES = [
   'Dolly zoom (Vertigo)',
   'Tracking shot',
   'Overhead drone descent',
+  'Compound move',
   // extend here
 ];
 
@@ -60,6 +61,14 @@ const LIGHTING = [
   'Backlit silhouette',
   'Moonlight',
   'Practical lamps only',
+  'Artificial lighting',
+  'Firelight',
+  'Fluorescent lighting',
+  'Mixed lighting',
+  'Top lighting',
+  'Underlighting',
+  'Edge lighting',
+  'Low-contrast lighting',
   // extend here
 ];
 
@@ -76,6 +85,75 @@ const STYLES = [
   'Hyperrealistic CGI',
   'Impressionist brushwork',
   'Gritty neo-noir',
+  // extend here
+];
+
+const SHOT_SIZES = [
+  'Extreme close-up',
+  'Close-up',
+  'Medium close-up',
+  'Medium shot',
+  'Medium wide shot',
+  'Wide shot',
+  // extend here
+];
+
+const COMPOSITIONS = [
+  'Center composition',
+  'Balanced composition',
+  'Left/right weighted composition',
+  'Symmetrical composition',
+  'Short-side composition',
+  // extend here
+];
+
+const CAMERA_ANGLES = [
+  'Eye level',
+  'Over-the-shoulder',
+  'High angle',
+  'Low angle',
+  'Dutch angle',
+  'Aerial shot',
+  // extend here
+];
+
+const LENSES = [
+  'Medium lens',
+  'Wide lens',
+  'Long-focus lens',
+  'Telephoto lens',
+  'Fisheye lens',
+  // extend here
+];
+
+const COLOR_TONES = [
+  'Warm colors',
+  'Cool colors',
+  'Saturated colors',
+  'Desaturated colors',
+  // extend here
+];
+
+const CHARACTER_EMOTIONS = [
+  'Happy',
+  'Sad',
+  'Angry',
+  'Fearful',
+  'Surprised',
+  'Nervous',
+  'Shy',
+  'Confident',
+  'Relaxed',
+  // extend here
+];
+
+const TIMES_OF_DAY = [
+  'Dawn',
+  'Sunrise',
+  'Daytime',
+  'Dusk',
+  'Sunset',
+  'Night',
   // extend here
 ];
 
@@ -115,6 +193,13 @@ const elContext       = $('context-textarea');
 const elCamera        = $('camera-select');
 const elLighting      = $('lighting-select');
 const elStyle         = $('style-select');
+const elShotSize      = $('shot-size-select');
+const elComposition   = $('composition-select');
+const elCameraAngle   = $('camera-angle-select');
+const elLens          = $('lens-select');
+const elColorTone     = $('color-tone-select');
+const elCharEmotion   = $('char-emotion-select');
+const elTimeOfDay     = $('time-of-day-select');
 const elNoCuts        = $('no-cuts-toggle');
 const elTimelineList  = $('timeline-list');
 const elAddEvent      = $('add-event-btn');
@@ -347,9 +432,16 @@ function compilePrompt() {
     .map(c => cleanPart(c.prompt))
     .join(' ');
   const context  = [charPrompts, cleanPart(elContext.value)].filter(Boolean).join(' ');
-  const camera   = elCamera.value;
-  const lighting = elLighting.value;
-  const style    = elStyle.value;
+  const camera      = elCamera.value;
+  const lighting    = elLighting.value;
+  const style       = elStyle.value;
+  const shotSize    = elShotSize.value;
+  const composition = elComposition.value;
+  const cameraAngle = elCameraAngle.value;
+  const lens        = elLens.value;
+  const colorTone   = elColorTone.value;
+  const charEmotion = elCharEmotion.value;
+  const timeOfDay    = elTimeOfDay.value;
   const noCuts   = elNoCuts.checked;
   const timeline = compileTimeline(timelineEvents);
   const isI2V    = mode === 'i2v';
@@ -373,6 +465,12 @@ function compilePrompt() {
   // Camera
   clauses.push({ key: 'Camera', value: camera ? `Camera: ${camera}.` : '' });
 
+  // Camera angle (both modes)
+  clauses.push({ key: 'Camera angle', value: cameraAngle ? `Camera angle: ${cameraAngle}.` : '' });
+
+  // Character emotion (both modes)
+  clauses.push({ key: 'Character emotion', value: charEmotion ? `Emotion: ${charEmotion}.` : '' });
+
   // Lighting (T2V only)
   if (!isI2V) {
     clauses.push({ key: 'Lighting', value: lighting ? `Lighting: ${lighting}.` : '' });
@@ -381,6 +479,31 @@ function compilePrompt() {
   // Style (T2V only)
   if (!isI2V) {
     clauses.push({ key: 'Style', value: style ? `Visual style: ${style}.` : '' });
+  }
+
+  // Shot size (T2V only)
+  if (!isI2V) {
+    clauses.push({ key: 'Shot size', value: shotSize ? `Shot size: ${shotSize}.` : '' });
+  }
+
+  // Composition (T2V only)
+  if (!isI2V) {
+    clauses.push({ key: 'Composition', value: composition ? `Composition: ${composition}.` : '' });
+  }
+
+  // Lens (T2V only)
+  if (!isI2V) {
+    clauses.push({ key: 'Lens', value: lens ? `Lens: ${lens}.` : '' });
+  }
+
+  // Color tone (T2V only)
+  if (!isI2V) {
+    clauses.push({ key: 'Color tone', value: colorTone ? `Color tone: ${colorTone}.` : '' });
+  }
+
+  // Time of day (T2V only)
+  if (!isI2V) {
+    clauses.push({ key: 'Time of day', value: timeOfDay ? `Time of day: ${timeOfDay}.` : '' });
   }
 
   // No cuts
@@ -629,6 +752,13 @@ function getFormState() {
     camera:   elCamera.value,
     lighting: elLighting.value,
     style:    elStyle.value,
+    shotSize:    elShotSize.value,
+    composition: elComposition.value,
+    cameraAngle: elCameraAngle.value,
+    lens:        elLens.value,
+    colorTone:   elColorTone.value,
+    charEmotion: elCharEmotion.value,
+    timeOfDay:   elTimeOfDay.value,
     noCuts:      elNoCuts.checked,
     directives:  elDirectives.value,
     timeline:     JSON.parse(JSON.stringify(timelineEvents)),
@@ -643,9 +773,16 @@ function applyFormState(state) {
   if (state.duration) elDuration.value = state.duration;
   elShot.value     = state.shot     ?? '';
   elContext.value  = state.context  ?? '';
-  if (state.camera)   elCamera.value   = state.camera;
-  if (state.lighting) elLighting.value = state.lighting;
-  if (state.style)    elStyle.value    = state.style;
+  if (state.camera)      elCamera.value      = state.camera;
+  if (state.lighting)    elLighting.value    = state.lighting;
+  if (state.style)       elStyle.value       = state.style;
+  if (state.shotSize)    elShotSize.value    = state.shotSize;
+  if (state.composition) elComposition.value = state.composition;
+  if (state.cameraAngle) elCameraAngle.value = state.cameraAngle;
+  if (state.lens)        elLens.value        = state.lens;
+  if (state.colorTone)   elColorTone.value   = state.colorTone;
+  if (state.charEmotion) elCharEmotion.value = state.charEmotion;
+  if (state.timeOfDay)   elTimeOfDay.value   = state.timeOfDay;
   elNoCuts.checked      = state.noCuts ?? false;
   elDirectives.value    = state.directives ?? '';
 
@@ -1124,9 +1261,16 @@ function resetGenButtons() {
 
 function init() {
   populateModels();
-  populateSelect(elCamera,   CAMERA_MOVES);
-  populateSelect(elLighting, LIGHTING);
-  populateSelect(elStyle,    STYLES);
+  populateSelect(elCamera,      CAMERA_MOVES);
+  populateSelect(elLighting,    LIGHTING);
+  populateSelect(elStyle,       STYLES);
+  populateSelect(elShotSize,    SHOT_SIZES);
+  populateSelect(elComposition, COMPOSITIONS);
+  populateSelect(elCameraAngle, CAMERA_ANGLES);
+  populateSelect(elLens,        LENSES);
+  populateSelect(elColorTone,   COLOR_TONES);
+  populateSelect(elCharEmotion, CHARACTER_EMOTIONS);
+  populateSelect(elTimeOfDay,   TIMES_OF_DAY);
 
   // Prompt form listeners
   elModel.addEventListener('change', syncModelMode);
@@ -1137,6 +1281,13 @@ function init() {
   elCamera.addEventListener('change', update);
   elLighting.addEventListener('change', update);
   elStyle.addEventListener('change', update);
+  elShotSize.addEventListener('change', update);
+  elComposition.addEventListener('change', update);
+  elCameraAngle.addEventListener('change', update);
+  elLens.addEventListener('change', update);
+  elColorTone.addEventListener('change', update);
+  elCharEmotion.addEventListener('change', update);
+  elTimeOfDay.addEventListener('change', update);
   elNoCuts.addEventListener('change', update);
   elDirectives.addEventListener('input', update);
 
