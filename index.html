@@ -24,6 +24,7 @@
     <div class="header-right">
       <span class="key-indicator" id="key-indicator">No API key</span>
       <button class="btn-ghost btn-sm" id="settings-btn">⚙ API settings</button>
+      <button class="btn-ghost btn-sm" id="refine-btn" title="Refine the focused text field with the uncensored AI assistant">✨ Refine</button>
       <button class="btn-ghost btn-sm" id="debug-btn">🔎 Debug clauses</button>
     </div>
   </header>
@@ -405,6 +406,43 @@
       <div style="display:flex;gap:8px;margin-left:auto">
         <button class="btn-ghost btn-sm" id="char-cancel-btn">Cancel</button>
         <button class="btn-primary btn-sm" id="char-save-btn">Save character</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Refine modal -->
+<div class="modal-overlay" id="refine-modal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <span class="modal-title">✨ Refine with AI</span>
+      <button class="btn-close" id="refine-modal-close">×</button>
+    </div>
+    <div class="refine-target-label" id="refine-target-label">No field selected</div>
+
+    <div class="field">
+      <label for="refine-instruction">Instruction</label>
+      <input type="text" id="refine-instruction" style="margin-top:6px" placeholder="e.g. make this more explicit, add more anatomical detail, describe the action sequence in more depth…">
+    </div>
+
+    <div class="refine-columns">
+      <div>
+        <span class="refine-col-title">Current</span>
+        <textarea id="refine-current" readonly></textarea>
+      </div>
+      <div>
+        <span class="refine-col-title">Suggested</span>
+        <textarea id="refine-suggested" readonly placeholder="Click Generate to get a refined version…"></textarea>
+      </div>
+    </div>
+
+    <div class="refine-status hidden" id="refine-status"></div>
+
+    <div class="char-modal-footer">
+      <button class="btn-ghost btn-sm" id="refine-cancel-btn">Close</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn-gold btn-sm" id="refine-generate-btn">Generate</button>
+        <button class="btn-primary btn-sm" id="refine-accept-btn" disabled>Accept</button>
       </div>
     </div>
   </div>

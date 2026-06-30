@@ -896,6 +896,17 @@ const elImagePreview   = $('image-preview');
 const elImageDesc      = $('image-desc-textarea');
 const elSuggestBtn     = $('suggest-btn');
 const elSuggestStatus  = $('suggest-status');
+const elRefineBtn         = $('refine-btn');
+const elRefineModal       = $('refine-modal');
+const elRefineModalClose  = $('refine-modal-close');
+const elRefineTargetLabel = $('refine-target-label');
+const elRefineInstruction = $('refine-instruction');
+const elRefineCurrent     = $('refine-current');
+const elRefineSuggested   = $('refine-suggested');
+const elRefineStatus      = $('refine-status');
+const elRefineCancelBtn   = $('refine-cancel-btn');
+const elRefineGenerateBtn = $('refine-generate-btn');
+const elRefineAcceptBtn   = $('refine-accept-btn');
 const elNegativePrompt = $('negative-prompt');
 const elAspectRatio    = $('aspect-ratio-select');
 const elResolution     = $('resolution-select');
@@ -1114,6 +1125,93 @@ function showSuggestStatus(type, html) {
   elSuggestStatus.classList.remove('hidden');
 }
 
+// ── API — refine with AI ──────────────────────────────────────────────────────
+//
+// Operates on whichever text field was last focused. Uses the uncensored
+// chat model directly — Venice has no content restrictions on this endpoint,
+// so explicit refinement instructions are handled there, not by us.
+
+let refineTarget      = null;
+let refineTargetLabel = '';
+
+function trackRefineTarget(el, label) {
+  el.addEventListener('focus', () => { refineTarget = el; refineTargetLabel = label; });
+}
+
+const REFINE_SYSTEM = `You are a prompt-refinement assistant for an uncensored AI video generation tool. The user will give you existing prompt text and an instruction describing how to refine it.
+
+Rewrite the text according to the instruction. Be as explicit and detailed as the instruction calls for — this tool has no content restrictions. Output ONLY the refined text itself: no commentary, no markdown formatting, no quotation marks, no preamble.`;
+
+function openRefineModal() {
+  if (!refineTarget) { showFlash('Click into a text field first (Shot Setup, Character/Context, Directives, or a Character prompt).'); return; }
+  elRefineTargetLabel.textContent = `Refining: ${refineTargetLabel}`;
+  elRefineCurrent.value   = refineTarget.value;
+  elRefineSuggested.value = '';
+  elRefineInstruction.value = '';
+  elRefineAcceptBtn.disabled = true;
+  elRefineStatus.classList.add('hidden');
+  elRefineModal.classList.add('open');
+  elRefineInstruction.focus();
+}
+
+function closeRefineModal() {
+  elRefineModal.classList.remove('open');
+}
+
+async function generateRefine() {
+  const key = getApiKey();
+  if (!key) { setRefineStatus('error', 'Set your Venice API key first (⚙ API settings).'); return; }
+  if (!refineTarget) { closeRefineModal(); return; }
+
+  const currentText = refineTarget.value.trim();
+  const instruction  = elRefineInstruction.value.trim();
+  if (!currentText && !instruction) { setRefineStatus('error', 'Add some text or an instruction first.'); return; }
+
+  elRefineGenerateBtn.disabled = true;
+  setRefineStatus('', 'Refining…');
+
+  try {
+    const res = await venicePost('/chat/completions', {
+      model: ASSIST_MODEL,
+      messages: [
+        { role: 'system', content: REFINE_SYSTEM },
+        { role: 'user',   content: `Existing text:\n"""${currentText}"""\n\nInstruction: ${instruction || 'Refine and improve this text.'}` },
+      ],
+      temperature: 0.85,
+      max_tokens: 700,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message ?? `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw  = data.choices?.[0]?.message?.content ?? '';
+    elRefineSuggested.value = raw.trim();
+    elRefineAcceptBtn.disabled = false;
+    setRefineStatus('success', '✓ Refined — review and accept, or adjust the instruction and try again.');
+  } catch (err) {
+    setRefineStatus('error', `Error: ${err.message}`);
+  } finally {
+    elRefineGenerateBtn.disabled = false;
+  }
+}
+
+function acceptRefine() {
+  if (!refineTarget || !elRefineSuggested.value) return;
+  refineTarget.value = elRefineSuggested.value;
+  refineTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  closeRefineModal();
+  showFlash('Refined text applied.');
+}
+
+function setRefineStatus(type, msg) {
+  elRefineStatus.textContent = msg;
+  elRefineStatus.className = `refine-status${type ? ' ' + type : ''}`;
+  elRefineStatus.classList.remove('hidden');
+}
+
 // ── API — quote ───────────────────────────────────────────────────────────────
 
 let currentQuoteUsd = null;
@@ -1318,6 +1416,18 @@ function init() {
   // I2V image
   elImageUrl.addEventListener('input', handleImageUrlChange);
   elSuggestBtn.addEventListener('click', suggestScript);
+
+  // Refine with AI
+  trackRefineTarget(elShot,       'Shot Setup');
+  trackRefineTarget(elContext,    'Character / Context');
+  trackRefineTarget(elDirectives, 'Additional Directives');
+  trackRefineTarget($('char-prompt-input'), 'Character Prompt');
+  elRefineBtn.addEventListener('click', openRefineModal);
+  elRefineModalClose.addEventListener('click', closeRefineModal);
+  elRefineCancelBtn.addEventListener('click', closeRefineModal);
+  elRefineModal.addEventListener('click', e => { if (e.target === elRefineModal) closeRefineModal(); });
+  elRefineGenerateBtn.addEventListener('click', generateRefine);
+  elRefineAcceptBtn.addEventListener('click', acceptRefine);
 
   // Generation
   elQuoteBtn.addEventListener('click', getQuote);
