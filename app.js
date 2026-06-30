@@ -217,6 +217,7 @@ const elLoadPreset    = $('load-preset-btn');
 const elDeletePreset  = $('delete-preset-btn');
 const elDirectives    = $('directives-textarea');
 const elCopyFlash     = $('copy-flash');
+const elOverrideIndicator = $('override-indicator');
 
 // ── Character library ─────────────────────────────────────────────────────────
 
@@ -527,6 +528,8 @@ function compilePrompt() {
 // ── UI update ─────────────────────────────────────────────────────────────────
 
 function update() {
+  elOverrideIndicator.classList.add('hidden');
+
   const { prompt, clauses } = compilePrompt();
   elOutput.value = prompt;
 
@@ -1200,10 +1203,25 @@ async function generateRefine() {
 
 function acceptRefine() {
   if (!refineTarget || !elRefineSuggested.value) return;
-  refineTarget.value = elRefineSuggested.value;
-  refineTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  if (refineTarget === elOutput) {
+    applyPromptOverride(elRefineSuggested.value);
+  } else {
+    refineTarget.value = elRefineSuggested.value;
+    refineTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   closeRefineModal();
   showFlash('Refined text applied.');
+}
+
+// Locks the compiled output as manually-edited text. Stays in place until
+// any source field changes, at which point update() recomputes normally.
+function applyPromptOverride(text) {
+  elOutput.value = text;
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  elCharCount.textContent = `${chars} chars`;
+  elWordCount.textContent = `${words} words`;
+  elOverrideIndicator.classList.remove('hidden');
 }
 
 function setRefineStatus(type, msg) {
@@ -1422,6 +1440,7 @@ function init() {
   trackRefineTarget(elContext,    'Character / Context');
   trackRefineTarget(elDirectives, 'Additional Directives');
   trackRefineTarget($('char-prompt-input'), 'Character Prompt');
+  trackRefineTarget(elOutput, 'Full Compiled Prompt');
   elRefineBtn.addEventListener('click', openRefineModal);
   elRefineModalClose.addEventListener('click', closeRefineModal);
   elRefineCancelBtn.addEventListener('click', closeRefineModal);
